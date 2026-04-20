@@ -1,0 +1,282 @@
+Here's the complete code for a simple To-Do List application using Flask for the backend and HTML/CSS/JavaScript for the frontend:
+
+### requirements.txt
+```
+Flask==2.3.2
+Flask-SQLAlchemy==3.0.3
+```
+
+### app.py (Backend)
+```python
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todo.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Task model
+class Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return f'<Task {self.id}>'
+
+# Create database tables
+with app.app_context():
+    db.create_all()
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+# API endpoints
+@app.route('/tasks', methods=['GET'])
+def get_tasks():
+    tasks = Task.query.all()
+    task_list = [{'id': task.id, 'title': task.title, 'completed': task.completed} for task in tasks]
+    return jsonify(task_list)
+
+@app.route('/tasks', methods=['POST'])
+def add_task():
+    data = request.get_json()
+    new_task = Task(title=data['title'], completed=False)
+    db.session.add(new_task)
+    db.session.commit()
+    return jsonify({'id': new_task.id, 'title': new_task.title, 'completed': new_task.completed}), 201
+
+@app.route('/tasks/<int:task_id>', methods=['PUT'])
+def update_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    data = request.get_json()
+    if 'title' in data:
+        task.title = data['title']
+    if 'completed' in data:
+        task.completed = data['completed']
+    db.session.commit()
+    return jsonify({'id': task.id, 'title': task.title, 'completed': task.completed})
+
+@app.route('/tasks/<int:task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    db.session.delete(task)
+    db.session.commit()
+    return jsonify({'result': 'success'})
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+### templates/index.html (Frontend)
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .task-item.completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .task-actions {
+            margin-left: auto;
+        }
+        .filter-buttons {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">To-Do List</h1>
+        
+        <div class="input-group mb-3">
+            <input type="text" id="taskInput" class="form-control" placeholder="Add a new task...">
+            <button class="btn btn-primary" id="addTaskBtn">Add Task</button>
+        </div>
+        
+        <div class="filter-buttons btn-group">
+            <button class="btn btn-outline-primary filter-btn" data-filter="all">All</button>
+            <button class="btn btn-outline-primary filter-btn" data-filter="active">Active</button>
+            <button class="btn btn-outline-primary filter-btn" data-filter="completed">Completed</button>
+        </div>
+        
+        <div id="taskList" class="list-group">
+            <!-- Tasks will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const taskInput = document.getElementById('taskInput');
+            const addTaskBtn = document.getElementById('addTaskBtn');
+            const taskList = document.getElementById('taskList');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            
+            let currentFilter = 'all';
+            
+            // Load tasks when page loads
+            loadTasks();
+            
+            // Add task event
+            addTaskBtn.addEventListener('click', addTask);
+            taskInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addTask();
+                }
+            });
+            
+            // Filter tasks
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    currentFilter = this.dataset.filter;
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    loadTasks();
+                });
+            });
+            
+            // Function to load tasks
+            function loadTasks() {
+                fetch('/tasks')
+                    .then(response => response.json())
+                    .then(tasks => {
+                        taskList.innerHTML = '';
+                        tasks.forEach(task => {
+                            if (currentFilter === 'all' || 
+                                (currentFilter === 'active' && !task.completed) || 
+                                (currentFilter === 'completed' && task.completed)) {
+                                createTaskElement(task);
+                            }
+                        });
+                    });
+            }
+            
+            // Function to create task element
+            function createTaskElement(task) {
+                const taskElement = document.createElement('div');
+                taskElement.className = `list-group-item task-item ${task.completed ? 'completed' : ''}`;
+                taskElement.dataset.id = task.id;
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'form-check-input me-2';
+                checkbox.checked = task.completed;
+                checkbox.addEventListener('change', toggleTask);
+                
+                const title = document.createElement('span');
+                title.textContent = task.title;
+                
+                const actions = document.createElement('div');
+                actions.className = 'task-actions';
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-sm btn-danger';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', deleteTask);
+                
+                actions.appendChild(deleteBtn);
+                
+                taskElement.appendChild(checkbox);
+                taskElement.appendChild(title);
+                taskElement.appendChild(actions);
+                
+                taskList.appendChild(taskElement);
+            }
+            
+            // Function to add a new task
+            function addTask() {
+                const title = taskInput.value.trim();
+                if (title) {
+                    fetch('/tasks', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ title: title })
+                    })
+                    .then(response => response.json())
+                    .then(task => {
+                        taskInput.value = '';
+                        loadTasks();
+                    });
+                }
+            }
+            
+            // Function to toggle task completion
+            function toggleTask(e) {
+                const taskId = e.target.closest('.task-item').dataset.id;
+                const completed = e.target.checked;
+                
+                fetch(`/tasks/${taskId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ completed: completed })
+                })
+                .then(() => {
+                    loadTasks();
+                });
+            }
+            
+            // Function to delete a task
+            function deleteTask(e) {
+                const taskId = e.target.closest('.task-item').dataset.id;
+                
+                fetch(`/tasks/${taskId}`, {
+                    method: 'DELETE'
+                })
+                .then(() => {
+                    loadTasks();
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+```
+
+### Project Structure
+```
+todo-app/
+│
+├── app.py
+├── requirements.txt
+└── templates/
+    └── index.html
+```
+
+### How to Run:
+1. Create a virtual environment: `python -m venv venv`
+2. Activate the virtual environment:
+   - Windows: `venv\Scripts\activate`
+   - Mac/Linux: `source venv/bin/activate`
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the application: `python app.py`
+5. Open your browser and go to `http://localhost:5000`
+
+This application provides:
+- Adding new tasks
+- Marking tasks as completed
+- Filtering tasks (All/Active/Completed)
+- Deleting tasks
+- Persistent storage using SQLite database
+- Responsive design with Bootstrap
