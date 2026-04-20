@@ -1,0 +1,103 @@
+# Database Setup for To-Do List Application
+
+Here's the complete database code for a Flask-based To-Do List application using SQLAlchemy:
+
+```python
+# database.py
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+
+# Initialize SQLAlchemy
+db = SQLAlchemy()
+
+class Task(db.Model):
+    """
+    Task model representing a to-do item in the database
+    """
+    __tablename__ = 'tasks'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    def __repr__(self):
+        return f'<Task {self.id}: {self.title}>'
+
+    def to_dict(self):
+        """
+        Convert task object to dictionary for JSON serialization
+        """
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'created_at': self.created_at.isoformat(),
+            'completed': self.completed,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None
+        }
+
+def init_db(app):
+    """
+    Initialize the database with the Flask app
+    """
+    # Configure SQLite database
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todo.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    # Initialize the database
+    db.init_app(app)
+    
+    # Create tables
+    with app.app_context():
+        db.create_all()
+```
+
+```python
+# __init__.py (for database package)
+from .database import db, Task, init_db
+```
+
+```text
+# requirements.txt
+Flask==2.3.2
+Flask-SQLAlchemy==3.0.3
+python-dotenv==1.0.0
+```
+
+### Key Features:
+
+1. **SQLAlchemy ORM**: Uses Flask-SQLAlchemy for database operations
+2. **Task Model**:
+   - Stores task title, description, creation time
+   - Tracks completion status and completion time
+3. **Database Initialization**:
+   - Sets up SQLite database (can be easily switched to other databases)
+   - Creates tables automatically
+4. **Serialization**:
+   - Includes `to_dict()` method for easy JSON conversion
+5. **Best Practices**:
+   - Proper table naming
+   - Null constraints where appropriate
+   - Timestamps for tracking
+   - Clean separation of concerns
+
+To use this database setup in your Flask application:
+
+```python
+from flask import Flask
+from database import init_db, db, Task
+
+app = Flask(__name__)
+init_db(app)
+
+# Example usage:
+with app.app_context():
+    new_task = Task(title="Sample Task", description="This is a test")
+    db.session.add(new_task)
+    db.session.commit()
+```
+
+The database will be created in an instance folder as `todo.db` (SQLite format). You can easily modify the connection string in `init_db()` to use other database systems like PostgreSQL or MySQL.
