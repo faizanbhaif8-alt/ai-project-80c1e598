@@ -1,0 +1,190 @@
+Here's the complete CSS code for a simple To-Do List application:
+
+```css
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+    padding: 20px;
+}
+
+/* Container styles */
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Header styles */
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.header h1 {
+    color: #2c3e50;
+}
+
+/* Form styles */
+.task-form {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.task-input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px 0 0 4px;
+    font-size: 16px;
+}
+
+.task-input:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.add-btn {
+    padding: 10px 15px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.add-btn:hover {
+    background-color: #2980b9;
+}
+
+/* Filter controls */
+.filter-controls {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    background-color: #ecf0f1;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.filter-btn:hover {
+    background-color: #bdc3c7;
+}
+
+.filter-btn.active {
+    background-color: #3498db;
+    color: white;
+}
+
+/* Task list styles */
+.task-list {
+    list-style-type: none;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.3s;
+}
+
+.task-item:hover {
+    background-color: #f9f9f9;
+}
+
+.task-checkbox {
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.task-text {
+    flex: 1;
+    word-break: break-word;
+}
+
+.task-text.completed {
+    text-decoration: line-through;
+    color: #95a5a6;
+}
+
+.delete-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: background-color 0.3s;
+}
+
+.delete-btn:hover {
+    background-color: #c0392b;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 20px;
+    color: #95a5a6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
+    
+    .task-form {
+        flex-direction: column;
+    }
+    
+    .task-input {
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    
+    .add-btn {
+        border-radius: 4px;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+```
+
+This CSS provides:
+1. Clean, responsive layout for the to-do list
+2. Styling for all interactive elements (buttons, checkboxes, input)
+3. Visual feedback for hover states and active states
+4. Different styles for completed vs active tasks
+5. Mobile-friendly adjustments
+6. Consistent spacing and typography
+7. Subtle animations for better user experience
+
+The design is minimal and functional, focusing on usability while maintaining a clean aesthetic.
