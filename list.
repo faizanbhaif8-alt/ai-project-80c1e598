@@ -1,0 +1,192 @@
+Here's the complete code for a simple To-Do List application using Flask and HTML:
+
+**File Structure:**
+```
+todo_app/
+├── app.py
+├── templates/
+│   └── index.html
+└── requirements.txt
+```
+
+**app.py:**
+```python
+from flask import Flask, render_template, request, redirect, url_for
+
+app = Flask(__name__)
+
+# In-memory storage for tasks (for simplicity)
+tasks = []
+
+@app.route('/')
+def index():
+    # Get filter parameter from URL (all, active, completed)
+    filter_type = request.args.get('filter', 'all')
+    
+    # Filter tasks based on the selected filter
+    if filter_type == 'active':
+        filtered_tasks = [task for task in tasks if not task['completed']]
+    elif filter_type == 'completed':
+        filtered_tasks = [task for task in tasks if task['completed']]
+    else:
+        filtered_tasks = tasks
+    
+    return render_template('index.html', tasks=filtered_tasks, filter_type=filter_type)
+
+@app.route('/add', methods=['POST'])
+def add_task():
+    # Get task from form submission
+    task_content = request.form['content']
+    
+    # Add new task to the list
+    if task_content.strip():
+        tasks.append({
+            'id': len(tasks) + 1,
+            'content': task_content,
+            'completed': False
+        })
+    
+    return redirect(url_for('index'))
+
+@app.route('/complete/<int:task_id>')
+def complete_task(task_id):
+    # Mark task as completed
+    for task in tasks:
+        if task['id'] == task_id:
+            task['completed'] = True
+            break
+    
+    return redirect(url_for('index'))
+
+@app.route('/delete/<int:task_id>')
+def delete_task(task_id):
+    # Remove task from the list
+    global tasks
+    tasks = [task for task in tasks if task['id'] != task_id]
+    
+    return redirect(url_for('index'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+**templates/index.html:**
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .task-form {
+            margin-bottom: 20px;
+        }
+        .task-input {
+            padding: 8px;
+            width: 70%;
+        }
+        .add-btn {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .task-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .task-item {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .task-actions a {
+            margin-left: 10px;
+            text-decoration: none;
+        }
+        .complete-btn {
+            color: #4CAF50;
+        }
+        .delete-btn {
+            color: #f44336;
+        }
+        .filter-links {
+            margin-top: 20px;
+        }
+        .filter-links a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: #333;
+        }
+        .filter-links a.active {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <h1>To-Do List</h1>
+    
+    <form class="task-form" action="/add" method="POST">
+        <input type="text" class="task-input" name="content" placeholder="Add a new task..." required>
+        <button type="submit" class="add-btn">Add Task</button>
+    </form>
+    
+    <ul class="task-list">
+        {% for task in tasks %}
+        <li class="task-item {% if task.completed %}completed{% endif %}">
+            <span>{{ task.content }}</span>
+            <div class="task-actions">
+                {% if not task.completed %}
+                <a href="/complete/{{ task.id }}" class="complete-btn">Complete</a>
+                {% endif %}
+                <a href="/delete/{{ task.id }}" class="delete-btn">Delete</a>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    
+    <div class="filter-links">
+        <a href="{{ url_for('index', filter='all') }}" class="{% if filter_type == 'all' %}active{% endif %}">All</a>
+        <a href="{{ url_for('index', filter='active') }}" class="{% if filter_type == 'active' %}active{% endif %}">Active</a>
+        <a href="{{ url_for('index', filter='completed') }}" class="{% if filter_type == 'completed' %}active{% endif %}">Completed</a>
+    </div>
+</body>
+</html>
+```
+
+**requirements.txt:**
+```
+Flask==2.0.1
+```
+
+**How to run the application:**
+1. Create the file structure as shown above
+2. Install the dependencies with: `pip install -r requirements.txt`
+3. Run the application with: `python app.py`
+4. Access the application at `http://localhost:5000`
+
+**Key Features:**
+1. Add new tasks
+2. Mark tasks as completed
+3. Delete tasks
+4. Filter tasks (All/Active/Completed)
+5. Simple and clean UI
+6. In-memory storage (for simplicity - would need database for production)
+
+The application is ready to use with these basic features. For a production environment, you would want to add a proper database (like SQLite or PostgreSQL) and potentially user authentication.
