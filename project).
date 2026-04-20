@@ -1,0 +1,223 @@
+Here's the complete code for the To-Do List application using Flask:
+
+**requirements.txt**
+```
+Flask==2.2.2
+```
+
+**app.py**
+```python
+from flask import Flask, render_template, request, redirect, url_for, jsonify
+import json
+import os
+
+app = Flask(__name__)
+
+# File to store tasks
+TASKS_FILE = 'tasks.json'
+
+def load_tasks():
+    """Load tasks from JSON file"""
+    if not os.path.exists(TASKS_FILE):
+        return []
+    with open(TASKS_FILE, 'r') as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return []
+
+def save_tasks(tasks):
+    """Save tasks to JSON file"""
+    with open(TASKS_FILE, 'w') as f:
+        json.dump(tasks, f, indent=4)
+
+@app.route('/')
+def index():
+    """Render the main page with all tasks"""
+    tasks = load_tasks()
+    return render_template('index.html', tasks=tasks)
+
+@app.route('/add', methods=['POST'])
+def add_task():
+    """Add a new task"""
+    task_content = request.form.get('content')
+    if task_content:
+        tasks = load_tasks()
+        new_task = {
+            'id': len(tasks) + 1,
+            'content': task_content,
+            'completed': False
+        }
+        tasks.append(new_task)
+        save_tasks(tasks)
+    return redirect(url_for('index'))
+
+@app.route('/complete/<int:task_id>')
+def complete_task(task_id):
+    """Mark a task as completed"""
+    tasks = load_tasks()
+    for task in tasks:
+        if task['id'] == task_id:
+            task['completed'] = True
+            break
+    save_tasks(tasks)
+    return redirect(url_for('index'))
+
+@app.route('/delete/<int:task_id>')
+def delete_task(task_id):
+    """Delete a task"""
+    tasks = load_tasks()
+    tasks = [task for task in tasks if task['id'] != task_id]
+    save_tasks(tasks)
+    return redirect(url_for('index'))
+
+@app.route('/active')
+def active_tasks():
+    """Show only active tasks"""
+    tasks = load_tasks()
+    active_tasks = [task for task in tasks if not task['completed']]
+    return render_template('index.html', tasks=active_tasks)
+
+@app.route('/completed')
+def completed_tasks():
+    """Show only completed tasks"""
+    tasks = load_tasks()
+    completed_tasks = [task for task in tasks if task['completed']]
+    return render_template('index.html', tasks=completed_tasks)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+**templates/index.html**
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .task-form {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .task-input {
+            flex-grow: 1;
+            padding: 8px;
+            font-size: 16px;
+        }
+        .add-btn {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .task-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 5px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .task-content {
+            flex-grow: 1;
+            margin: 0 10px;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .action-btn {
+            padding: 5px 10px;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+        .complete-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+        }
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+        }
+        .filter-btns {
+            margin-bottom: 20px;
+        }
+        .filter-btn {
+            padding: 8px 16px;
+            margin-right: 5px;
+            background-color: #e7e7e7;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>To-Do List</h1>
+    
+    <div class="filter-btns">
+        <a href="{{ url_for('index') }}" class="filter-btn">All</a>
+        <a href="{{ url_for('active_tasks') }}" class="filter-btn">Active</a>
+        <a href="{{ url_for('completed_tasks') }}" class="filter-btn">Completed</a>
+    </div>
+    
+    <form action="{{ url_for('add_task') }}" method="POST" class="task-form">
+        <input type="text" name="content" class="task-input" placeholder="Add a new task..." required>
+        <button type="submit" class="add-btn">Add</button>
+    </form>
+    
+    <ul class="task-list">
+        {% for task in tasks %}
+        <li class="task-item">
+            <div class="task-content {% if task.completed %}completed{% endif %}">
+                {{ task.content }}
+            </div>
+            {% if not task.completed %}
+            <a href="{{ url_for('complete_task', task_id=task.id) }}" class="action-btn complete-btn">Complete</a>
+            {% endif %}
+            <a href="{{ url_for('delete_task', task_id=task.id) }}" class="action-btn delete-btn">Delete</a>
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+```
+
+**Directory Structure**
+```
+todo-app/
+├── app.py
+├── requirements.txt
+├── templates/
+│   └── index.html
+└── tasks.json (will be created automatically)
+```
+
+To run the application:
+1. Create a new directory and place these files in it
+2. Install dependencies: `pip install -r requirements.txt`
+3. Run the application: `python app.py`
+4. Open your browser to `http://localhost:5000`
+
+The application includes:
+- Adding new tasks
+- Marking tasks as completed
+- Deleting tasks
+- Filtering tasks (all/active/completed)
+- Persistent storage using JSON file
+- Simple and clean UI with CSS styling
