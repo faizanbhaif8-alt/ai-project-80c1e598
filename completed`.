@@ -1,0 +1,293 @@
+I'll provide a complete Flask-based To-Do List application with all the requested functionality. Here's the code:
+
+1. First, create a file structure like this:
+```
+todo_app/
+├── app.py
+├── templates/
+│   └── index.html
+├── static/
+│   └── style.css
+└── requirements.txt
+```
+
+Here are the complete files:
+
+1. app.py (main Flask application):
+```python
+from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todo.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Task model
+class Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(200), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Task {self.id}>'
+
+# Create database tables
+with app.app_context():
+    db.create_all()
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        task_content = request.form['content']
+        if task_content.strip():  # Don't add empty tasks
+            new_task = Task(content=task_content)
+            try:
+                db.session.add(new_task)
+                db.session.commit()
+                return redirect('/')
+            except:
+                return 'There was an issue adding your task'
+    
+    tasks = Task.query.order_by(Task.date_created).all()
+    return render_template('index.html', tasks=tasks)
+
+@app.route('/delete/<int:id>')
+def delete(id):
+    task_to_delete = Task.query.get_or_404(id)
+    try:
+        db.session.delete(task_to_delete)
+        db.session.commit()
+        return redirect('/')
+    except:
+        return 'There was a problem deleting that task'
+
+@app.route('/complete/<int:id>')
+def complete(id):
+    task = Task.query.get_or_404(id)
+    task.completed = not task.completed  # Toggle completion status
+    try:
+        db.session.commit()
+        return redirect('/')
+    except:
+        return 'There was a problem updating that task'
+
+@app.route('/active')
+def active_tasks():
+    tasks = Task.query.filter_by(completed=False).order_by(Task.date_created).all()
+    return render_template('index.html', tasks=tasks)
+
+@app.route('/completed')
+def completed_tasks():
+    tasks = Task.query.filter_by(completed=True).order_by(Task.date_created).all()
+    return render_template('index.html', tasks=tasks)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+2. templates/index.html (HTML template with Jinja2):
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>To-Do List</h1>
+        
+        <form action="/" method="POST">
+            <input type="text" name="content" id="content" placeholder="Add new task..." required>
+            <button type="submit">Add Task</button>
+        </form>
+
+        <div class="filter-buttons">
+            <a href="/" class="button">All Tasks</a>
+            <a href="/active" class="button">Active</a>
+            <a href="/completed" class="button">Completed</a>
+        </div>
+
+        {% if tasks %}
+            <ul class="task-list">
+                {% for task in tasks %}
+                    <li class="task-item {% if task.completed %}completed{% endif %}">
+                        <span>{{ task.content }}</span>
+                        <div class="task-actions">
+                            <a href="/complete/{{ task.id }}" class="complete-btn">
+                                {% if task.completed %}Undo{% else %}Complete{% endif %}
+                            </a>
+                            <a href="/delete/{{ task.id }}" class="delete-btn">Delete</a>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="no-tasks">No tasks found. Add a task above!</p>
+        {% endif %}
+    </div>
+</body>
+</html>
+```
+
+3. static/style.css (CSS styling):
+```css
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+.container {
+    max-width: 800px;
+    margin: 50px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #444;
+}
+
+form {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+button {
+    padding: 10px 20px;
+    background: #5cb85c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+    font-size: 16px;
+}
+
+button:hover {
+    background: #4cae4c;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.button {
+    padding: 8px 16px;
+    background: #337ab7;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.button:hover {
+    background: #286090;
+}
+
+.task-list {
+    list-style: none;
+    padding: 0;
+}
+
+.task-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border-left: 4px solid #5bc0de;
+}
+
+.task-item.completed {
+    border-left-color: #5cb85c;
+    opacity: 0.7;
+}
+
+.task-item.completed span {
+    text-decoration: line-through;
+}
+
+.task-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.complete-btn {
+    padding: 5px 10px;
+    background: #5bc0de;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.complete-btn:hover {
+    background: #46b8da;
+}
+
+.delete-btn {
+    padding: 5px 10px;
+    background: #d9534f;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.delete-btn:hover {
+    background: #c9302c;
+}
+
+.no-tasks {
+    text-align: center;
+    color: #777;
+    font-style: italic;
+}
+```
+
+4. requirements.txt (dependencies):
+```
+Flask==2.3.2
+Flask-SQLAlchemy==3.0.3
+```
+
+To run the application:
+1. Create a virtual environment: `python -m venv venv`
+2. Activate it: `source venv/bin/activate` (Linux/Mac) or `venv\Scripts\activate` (Windows)
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the app: `python app.py`
+
+The application will be available at http://localhost:5000
+
+Features included:
+- Add new tasks
+- Mark tasks as completed/uncompleted
+- Delete tasks
+- Filter tasks (all/active/completed)
+- Responsive design
+- SQLite database for persistence
