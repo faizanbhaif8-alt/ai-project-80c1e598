@@ -1,0 +1,243 @@
+Here's the complete code for index.html for a simple To-Do List application:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple To-Do List</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .todo-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        #task-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        #add-btn {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #add-btn:hover {
+            background-color: #45a049;
+        }
+        .filter-buttons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .filter-btn {
+            padding: 8px 16px;
+            margin: 0 5px;
+            background-color: #f1f1f1;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .filter-btn.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .task-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .task-item:last-child {
+            border-bottom: none;
+        }
+        .task-text {
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="todo-container">
+        <h1>To-Do List</h1>
+        
+        <!-- Input for adding new tasks -->
+        <div class="input-container">
+            <input type="text" id="task-input" placeholder="Add a new task...">
+            <button id="add-btn">Add</button>
+        </div>
+        
+        <!-- Filter buttons -->
+        <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="active">Active</button>
+            <button class="filter-btn" data-filter="completed">Completed</button>
+        </div>
+        
+        <!-- Task list -->
+        <ul class="task-list" id="task-list">
+            <!-- Tasks will be added here dynamically -->
+        </ul>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const taskInput = document.getElementById('task-input');
+            const addBtn = document.getElementById('add-btn');
+            const taskList = document.getElementById('task-list');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            
+            // Current filter state
+            let currentFilter = 'all';
+            
+            // Add task function
+            function addTask() {
+                const taskText = taskInput.value.trim();
+                if (taskText) {
+                    // Create new task item
+                    const taskItem = document.createElement('li');
+                    taskItem.className = 'task-item';
+                    taskItem.innerHTML = `
+                        <input type="checkbox" class="task-checkbox">
+                        <span class="task-text">${taskText}</span>
+                        <button class="delete-btn">Delete</button>
+                    `;
+                    
+                    // Add to the list
+                    taskList.appendChild(taskItem);
+                    
+                    // Clear input
+                    taskInput.value = '';
+                    
+                    // Add event listeners to new elements
+                    const checkbox = taskItem.querySelector('.task-checkbox');
+                    const deleteBtn = taskItem.querySelector('.delete-btn');
+                    
+                    checkbox.addEventListener('change', toggleTaskComplete);
+                    deleteBtn.addEventListener('click', deleteTask);
+                    
+                    // Apply current filter
+                    applyFilter();
+                }
+            }
+            
+            // Toggle task completion status
+            function toggleTaskComplete(e) {
+                const taskText = e.target.nextElementSibling;
+                taskText.classList.toggle('completed');
+                applyFilter();
+            }
+            
+            // Delete task
+            function deleteTask(e) {
+                const taskItem = e.target.parentElement;
+                taskList.removeChild(taskItem);
+            }
+            
+            // Filter tasks
+            function applyFilter() {
+                const tasks = document.querySelectorAll('.task-item');
+                
+                tasks.forEach(task => {
+                    const isCompleted = task.querySelector('.task-text').classList.contains('completed');
+                    
+                    switch(currentFilter) {
+                        case 'all':
+                            task.style.display = 'flex';
+                            break;
+                        case 'active':
+                            task.style.display = isCompleted ? 'none' : 'flex';
+                            break;
+                        case 'completed':
+                            task.style.display = isCompleted ? 'flex' : 'none';
+                            break;
+                    }
+                });
+            }
+            
+            // Change filter
+            function changeFilter(e) {
+                // Update active button
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // Set new filter
+                currentFilter = e.target.dataset.filter;
+                applyFilter();
+            }
+            
+            // Event listeners
+            addBtn.addEventListener('click', addTask);
+            taskInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addTask();
+                }
+            });
+            
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', changeFilter);
+            });
+        });
+    </script>
+</body>
+</html>
+```
+
+This HTML file includes:
+1. A clean, responsive design with CSS styling
+2. Input field for adding new tasks
+3. Filter buttons to view all/active/completed tasks
+4. Task list that displays all tasks
+5. JavaScript functionality to:
+   - Add new tasks
+   - Mark tasks as complete/incomplete
+   - Delete tasks
+   - Filter tasks based on completion status
+6. Event listeners for user interactions
+
+The code is self-contained with all HTML, CSS, and JavaScript in one file for simplicity. For a production application, you might want to separate these into different files.
