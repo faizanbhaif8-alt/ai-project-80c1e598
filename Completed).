@@ -1,0 +1,382 @@
+I'll provide a complete Flask-based To-Do List application with all the requested functionality. Here's the code:
+
+**File Structure:**
+```
+todo_app/
+├── app.py
+├── templates/
+│   ├── base.html
+│   ├── index.html
+├── static/
+│   ├── style.css
+├── requirements.txt
+```
+
+**1. app.py (main Flask application):**
+```python
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+import os
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todos.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Database model for Todo items
+class Todo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(200), nullable=False)
+    completed = db.Column(db.Integer, default=0)
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Task {self.id}>'
+
+# Create database tables
+with app.app_context():
+    db.create_all()
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        task_content = request.form['content']
+        if not task_content.strip():
+            flash('Task cannot be empty!', 'error')
+            return redirect(url_for('index'))
+            
+        new_task = Todo(content=task_content)
+        try:
+            db.session.add(new_task)
+            db.session.commit()
+            flash('Task added successfully!', 'success')
+            return redirect('/')
+        except:
+            flash('There was an issue adding your task', 'error')
+            return redirect('/')
+    else:
+        tasks = Todo.query.order_by(Todo.date_created).all()
+        return render_template('index.html', tasks=tasks)
+
+@app.route('/delete/<int:id>')
+def delete(id):
+    task_to_delete = Todo.query.get_or_404(id)
+    try:
+        db.session.delete(task_to_delete)
+        db.session.commit()
+        flash('Task deleted successfully!', 'success')
+        return redirect('/')
+    except:
+        flash('There was a problem deleting that task', 'error')
+        return redirect('/')
+
+@app.route('/complete/<int:id>')
+def complete(id):
+    task = Todo.query.get_or_404(id)
+    task.completed = 1
+    try:
+        db.session.commit()
+        flash('Task marked as completed!', 'success')
+        return redirect('/')
+    except:
+        flash('There was an issue updating your task', 'error')
+        return redirect('/')
+
+@app.route('/uncomplete/<int:id>')
+def uncomplete(id):
+    task = Todo.query.get_or_404(id)
+    task.completed = 0
+    try:
+        db.session.commit()
+        flash('Task marked as active!', 'success')
+        return redirect('/')
+    except:
+        flash('There was an issue updating your task', 'error')
+        return redirect('/')
+
+@app.route('/active')
+def active_tasks():
+    tasks = Todo.query.filter_by(completed=0).order_by(Todo.date_created).all()
+    return render_template('index.html', tasks=tasks)
+
+@app.route('/completed')
+def completed_tasks():
+    tasks = Todo.query.filter_by(completed=1).order_by(Todo.date_created).all()
+    return render_template('index.html', tasks=tasks)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+**2. templates/base.html (base template):**
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Todo List</h1>
+            <nav>
+                <a href="{{ url_for('index') }}">All Tasks</a>
+                <a href="{{ url_for('active_tasks') }}">Active</a>
+                <a href="{{ url_for('completed_tasks') }}">Completed</a>
+            </nav>
+        </header>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
+```
+
+**3. templates/index.html (main template):**
+```html
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="todo-form">
+        <form action="/" method="POST">
+            <input type="text" name="content" id="content" placeholder="Add new task..." required>
+            <button type="submit">Add Task</button>
+        </form>
+    </div>
+
+    {% if tasks|length < 1 %}
+        <p class="no-tasks">No tasks yet. Add one above!</p>
+    {% else %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Added</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                    <tr>
+                        <td {% if task.completed %}class="completed"{% endif %}>{{ task.content }}</td>
+                        <td>{{ task.date_created.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if task.completed %}
+                                Completed
+                            {% else %}
+                                Active
+                            {% endif %}
+                        </td>
+                        <td class="actions">
+                            {% if not task.completed %}
+                                <a href="{{ url_for('complete', id=task.id) }}" class="complete-btn">Complete</a>
+                            {% else %}
+                                <a href="{{ url_for('uncomplete', id=task.id) }}" class="uncomplete-btn">Uncomplete</a>
+                            {% endif %}
+                            <a href="{{ url_for('delete', id=task.id) }}" class="delete-btn">Delete</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+{% endblock %}
+```
+
+**4. static/style.css (styling):**
+```css
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+nav {
+    margin-bottom: 20px;
+}
+
+nav a {
+    margin: 0 10px;
+    text-decoration: none;
+    color: #3498db;
+    font-weight: bold;
+}
+
+nav a:hover {
+    color: #2980b9;
+}
+
+.todo-form {
+    margin-bottom: 20px;
+    display: flex;
+}
+
+.todo-form input {
+    flex: 1;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px 0 0 4px;
+}
+
+.todo-form button {
+    padding: 10px 20px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.todo-form button:hover {
+    background-color: #27ae60;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.completed {
+    text-decoration: line-through;
+    color: #888;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+.actions a {
+    padding: 5px 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.complete-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.complete-btn:hover {
+    background-color: #2980b9;
+}
+
+.uncomplete-btn {
+    background-color: #f39c12;
+    color: white;
+}
+
+.uncomplete-btn:hover {
+    background-color: #e67e22;
+}
+
+.delete-btn {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.delete-btn:hover {
+    background-color: #c0392b;
+}
+
+.alert {
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.no-tasks {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    margin-top: 20px;
+}
+```
+
+**5. requirements.txt (dependencies):**
+```text
+Flask==2.3.2
+Flask-SQLAlchemy==3.0.5
+```
+
+**How to run the application:**
+1. Create a virtual environment: `python -m venv venv`
+2. Activate the virtual environment:
+   - On Windows: `venv\Scripts\activate`
+   - On macOS/Linux: `source venv/bin/activate`
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the application: `python app.py`
+5. Open your browser and go to `http://localhost:5000`
+
+The application includes all the requested features:
+- Add new tasks
+- Mark tasks as completed
+- View all tasks, active tasks, and completed tasks
+- Delete tasks
+- Flash messages for user feedback
+- Responsive design with CSS styling
+- SQLite database for persistent storage
+
+The code follows Flask best practices with proper error handling, database operations, and template inheritance. The styling is clean and user-friendly.
